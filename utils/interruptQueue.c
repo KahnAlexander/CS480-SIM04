@@ -85,6 +85,29 @@ Interrupt *dequeue( InterruptQueue *queue )
 }
 
 //==========================================================================
+/**
+* @brief
+*
+* @details
+*
+* @par Algorithm
+*
+*
+* @param[out]
+*
+*
+* @return
+*/
+Interrupt *createInterrupt( int pid )
+{
+    Interrupt *returnInt = malloc( sizeof( Interrupt ) );
+    returnInt->pid = pid;
+    returnInt->next = NULL;
+
+    return returnInt;
+}
+
+//==========================================================================
 // Terminating Precompiler Directives ///////////////////////////////
 //
 ///// NONE
