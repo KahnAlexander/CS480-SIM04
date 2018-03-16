@@ -60,6 +60,21 @@ void runSJFN( Config *configData, ProcessList *procList, LogList *logList,
 
 //==========================================================================
 
+void runSRTF( Config *configData, ProcessList *procList, LogList *logList,
+                MMUList *mmu );
+
+//==========================================================================
+
+void runFCFSP( Config *configData, ProcessList *procList, LogList *logList,
+                MMUList *mmu );
+
+//==========================================================================
+
+void runRRP( Config *configData, ProcessList *procList, LogList *logList,
+                MMUList *mmu );
+
+//==========================================================================
+
 void logListToFile( Config *configData, LogList *logList );
 
 //==========================================================================

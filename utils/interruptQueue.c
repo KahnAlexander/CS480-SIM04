@@ -46,7 +46,7 @@ void enqueue( InterruptQueue *queue, Interrupt *interrupt )
     if( queue->first == NULL && queue->count == 0 )
     {
         queue->first = interrupt;
-        count++;
+        queue->count++;
         return;
     }
 
@@ -57,7 +57,7 @@ void enqueue( InterruptQueue *queue, Interrupt *interrupt )
     }
 
     currInt->next = interrupt;
-    count++;
+    queue->count++;
     return;
 }
 
@@ -79,7 +79,7 @@ Interrupt *dequeue( InterruptQueue *queue )
 {
     Interrupt *returnInt = queue->first;
     queue->first = queue->first->next;
-    count--;
+    queue->count--;
 
     return returnInt;
 }

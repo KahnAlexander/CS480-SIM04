@@ -148,21 +148,15 @@ void runScheduler( Config *configData, ProcessList *procList, LogList *logList,
     }
     else if( stringCompare( configData->scheduleCode, SRTF_P ) == 0 )
     {
-        logAction( "OS: SRTF-P Strategy is not yet implemented",
-                    configData, logList );
-        logAction( "System End", configData, logList );
+        runSRTF( configData, procList, logList, mmu );
     }
     else if( stringCompare( configData->scheduleCode, FCFS_P ) == 0 )
     {
-        logAction( "OS: FCFS-P Strategy is not yet implemented",
-                    configData, logList );
-        logAction( "System End", configData, logList );
+        runFCFSP( configData, procList, logList, mmu );
     }
     else if( stringCompare( configData->scheduleCode, RR_P ) == 0 )
     {
-        logAction( "OS: RR-P Strategy is not yet implemented",
-                    configData, logList );
-        logAction( "System End", configData, logList );
+        runRRP( configData, procList, logList, mmu );
     }
 }
 
@@ -323,6 +317,84 @@ void runSJFN( Config *configData, ProcessList *procList, LogList *logList,
 
     logAction( "System End", configData, logList );
 
+    return;
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in] procList
+*   A pointer to a processList struct storing the created PCBs
+*
+* @param[in] configData
+*   A pointer to a Config struct storing the given configuration data
+*
+* @param[in] logList
+*   A pointer to a logList struct storing the created logs
+*
+* @param[in] mmu
+*   A pointer to an MMUList struct storing allocs
+*
+*/
+void runSRTF( Config *configData, ProcessList *procList, LogList *logList,
+                MMUList *mmu )
+{
+    // create interrupt queue, loop processing, and check after each cycle
+    return;
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in] procList
+*   A pointer to a processList struct storing the created PCBs
+*
+* @param[in] configData
+*   A pointer to a Config struct storing the given configuration data
+*
+* @param[in] logList
+*   A pointer to a logList struct storing the created logs
+*
+* @param[in] mmu
+*   A pointer to an MMUList struct storing allocs
+*
+*/
+void runFCFSP( Config *configData, ProcessList *procList, LogList *logList,
+                MMUList *mmu )
+{
+    // create interrupt queue, loop processing, and check after each cycle
+    return;
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in] procList
+*   A pointer to a processList struct storing the created PCBs
+*
+* @param[in] configData
+*   A pointer to a Config struct storing the given configuration data
+*
+* @param[in] logList
+*   A pointer to a logList struct storing the created logs
+*
+* @param[in] mmu
+*   A pointer to an MMUList struct storing allocs
+*
+*/
+void runRRP( Config *configData, ProcessList *procList, LogList *logList,
+                MMUList *mmu )
+{
+    // create interrupt queue, loop processing, and check after each cycle
     return;
 }
 
