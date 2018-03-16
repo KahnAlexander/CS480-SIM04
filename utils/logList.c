@@ -34,8 +34,6 @@ const int STD_LOG_STR = 120;
 * @details Function allocates space for a linked list, sets equal to a
 *   pointer, and returns that pointer.
 *
-* @post returned pointer now points to a linked list in memory
-*
 * @par Algorithm
 *   Function allocates space for a linked list, sets a pointer to that
 *   space, and returns the pointer. Sets initial fields first and count
