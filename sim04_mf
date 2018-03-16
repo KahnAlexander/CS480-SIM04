@@ -1,0 +1,69 @@
+CC = gcc
+
+DEBUG = -g
+OBJDIR = obj
+
+CFLAGS = -Wall -std=c99 -pedantic -c -Iparse -Isrc -Iutils $(DEBUG)
+LFLAGS = -Wall -std=c99 -pedantic -pthread $(DEBUG)
+
+
+sim04 : $(OBJDIR)/main.o $(OBJDIR)/configParser.o $(OBJDIR)/metadataParser.o \
+$(OBJDIR)/processList.o $(OBJDIR)/metadataList.o $(OBJDIR)/simulator.o \
+$(OBJDIR)/logList.o $(OBJDIR)/simtimer.o $(OBJDIR)/utilities.o\
+$(OBJDIR)/mmuList.o
+	$(CC) $(LFLAGS) $(OBJDIR)/main.o $(OBJDIR)/configParser.o \
+    $(OBJDIR)/metadataParser.o $(OBJDIR)/metadataList.o $(OBJDIR)/utilities.o \
+    $(OBJDIR)/processList.o $(OBJDIR)/simulator.o $(OBJDIR)/logList.o \
+    $(OBJDIR)/simtimer.o $(OBJDIR)/mmuList.o -o sim04
+
+
+$(OBJDIR)/main.o : src/main.c parse/configParser.h parse/metadataParser.h \
+utils/metadataList.h utils/utilities.h src/simulator.h
+	$(CC) $(CFLAGS) src/main.c -o $(OBJDIR)/main.o
+
+
+$(OBJDIR)/simulator.o : src/simulator.c src/simulator.h utils/logList.h \
+utils/simtimer.h
+	$(CC) $(CFLAGS) src/simulator.c -o $(OBJDIR)/simulator.o
+
+
+$(OBJDIR)/configParser.o : parse/configParser.c parse/configParser.h \
+parse/metadataParser.h
+	$(CC) $(CFLAGS) parse/configParser.c -o $(OBJDIR)/configParser.o
+
+
+$(OBJDIR)/metadataParser.o : parse/metadataParser.c parse/metadataParser.h \
+utils/metadataList.h utils/utilities.h
+	$(CC) $(CFLAGS) parse/metadataParser.c -o $(OBJDIR)/metadataParser.o
+
+
+$(OBJDIR)/metadataList.o : utils/metadataList.c utils/metadataList.h
+	$(CC) $(CFLAGS) utils/metadataList.c -o $(OBJDIR)/metadataList.o
+
+
+$(OBJDIR)/processList.o : utils/processList.c utils/processList.h
+	$(CC) $(CFLAGS) utils/processList.c -o $(OBJDIR)/processList.o
+
+
+$(OBJDIR)/utilities.o : utils/utilities.c utils/utilities.h
+	$(CC) $(CFLAGS) utils/utilities.c -o $(OBJDIR)/utilities.o
+
+
+$(OBJDIR)/logList.o : utils/logList.c utils/logList.h
+	$(CC) $(CFLAGS) utils/logList.c -o $(OBJDIR)/logList.o
+
+
+$(OBJDIR)/mmuList.o : utils/mmuList.c utils/mmuList.h
+	$(CC) $(CFLAGS) utils/mmuList.c -o $(OBJDIR)/mmuList.o
+
+
+$(OBJDIR)/simtimer.o : utils/simtimer.c utils/simtimer.h
+	$(CC) $(CFLAGS) utils/simtimer.c -o $(OBJDIR)/simtimer.o
+
+
+.PHONY: clean
+
+
+# cleans files by removing .o files and executable sim04
+clean:
+	rm obj/*.o sim04

@@ -1,3 +1,10 @@
+# Input
+*.mdf
+*.cnf
+
+# Output
+*.lgf
+
 # Prerequisites
 *.d
 
