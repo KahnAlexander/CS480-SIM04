@@ -300,6 +300,10 @@ int getNextOpCode( char *dataToScan, MetadataList *list )
     {
       valueStr[valueStrIndex++] = dataToScan[dataIndex++];
     }
+    if( command == 'M' && stringLength( valueStr ) != 8 )
+    {
+        return INVALID_OP_CODE;
+    }
     value = stringToInt( valueStr );
 
     if( dataToScan[dataIndex] == PERIOD )

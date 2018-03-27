@@ -633,32 +633,154 @@ int allocateMem( int value, MMUList *mmu, ProcessControlBlock *currBlock,
 
     sprintf( valStr, "%d", value );
 
-    if( stringLength( valStr ) != 8 )
+    // M opCode value lead with 7 zeros
+    if( stringLength( valStr ) == 1 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = '0';
+        baseStr[1] = '0';
+        baseStr[2] = '0';
+        baseStr[3] = '\0';
+
+        offStr[0] = '0';
+        offStr[1] = '0';
+        offStr[2] = valStr[0];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 6 zeros
+    else if( stringLength( valStr ) == 2 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = '0';
+        baseStr[1] = '0';
+        baseStr[2] = '0';
+        baseStr[3] = '\0';
+
+        offStr[0] = '0';
+        offStr[1] = valStr[0];
+        offStr[2] = valStr[1];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 5 zeros
+    else if( stringLength( valStr ) == 3 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = '0';
+        baseStr[1] = '0';
+        baseStr[2] = '0';
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[0];
+        offStr[1] = valStr[1];
+        offStr[2] = valStr[2];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 4 zeros
+    else if( stringLength( valStr ) == 4 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = '0';
+        baseStr[1] = '0';
+        baseStr[2] = valStr[0];
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[1];
+        offStr[1] = valStr[2];
+        offStr[2] = valStr[3];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 3 zeros
+    else if( stringLength( valStr ) == 5 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = '0';
+        baseStr[1] = valStr[0];
+        baseStr[2] = valStr[1];
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[2];
+        offStr[1] = valStr[3];
+        offStr[2] = valStr[4];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 2 zeros
+    else if( stringLength( valStr ) == 6 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = valStr[0];
+        baseStr[1] = valStr[1];
+        baseStr[2] = valStr[2];
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[3];
+        offStr[1] = valStr[4];
+        offStr[2] = valStr[5];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 1 zero
+    else if( stringLength( valStr ) == 7 )
+    {
+        segStr[0] = '0';
+        segStr[1] = valStr[0];
+        segStr[2] = '\0';
+
+        baseStr[0] = valStr[1];
+        baseStr[1] = valStr[2];
+        baseStr[2] = valStr[3];
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[4];
+        offStr[1] = valStr[5];
+        offStr[2] = valStr[6];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with no zeros
+    else if( stringLength( valStr ) == 8 )
+    {
+        segStr[0] = valStr[0];
+        segStr[1] = valStr[1];
+        segStr[2] = '\0';
+
+        baseStr[0] = valStr[2];
+        baseStr[1] = valStr[3];
+        baseStr[2] = valStr[4];
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[5];
+        offStr[1] = valStr[6];
+        offStr[2] = valStr[7];
+        offStr[3] = '\0';
+    }
+    else
     {
         return -1;
     }
-
-    segStr[0] = valStr[0];
-    segStr[1] = valStr[1];
-    segStr[2] = '\0';
-
-    baseStr[0] = valStr[2];
-    baseStr[1] = valStr[3];
-    baseStr[2] = valStr[4];
-    baseStr[3] = '\0';
-
-    offStr[0] = valStr[5];
-    offStr[1] = valStr[6];
-    offStr[2] = valStr[7];
-    offStr[3] = '\0';
 
     int sid = stringToInt( segStr );
     int base = stringToInt( baseStr );
     int offset = stringToInt( offStr );
 
     snprintf( logStr, STD_LOG_STR,
-              "Process %d, MMU Allocation: %d/%d/%d",
-              currBlock->pid, sid, base, offset );
+              "Process %d, MMU Access: %s/%s/%s",
+              currBlock->pid, segStr, baseStr, offStr );
     logAction( logStr, configData, logList );
 
     MMUNode *node = createMMUNode( currBlock->pid, sid, base, offset,
@@ -715,32 +837,154 @@ int accessMem( int value, MMUList *mmu, ProcessControlBlock *currBlock,
 
     sprintf( valStr, "%d", value );
 
-    if( stringLength( valStr ) != 8 )
+    // M opCode value lead with 7 zeros
+    if( stringLength( valStr ) == 1 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = '0';
+        baseStr[1] = '0';
+        baseStr[2] = '0';
+        baseStr[3] = '\0';
+
+        offStr[0] = '0';
+        offStr[1] = '0';
+        offStr[2] = valStr[0];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 6 zeros
+    else if( stringLength( valStr ) == 2 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = '0';
+        baseStr[1] = '0';
+        baseStr[2] = '0';
+        baseStr[3] = '\0';
+
+        offStr[0] = '0';
+        offStr[1] = valStr[0];
+        offStr[2] = valStr[1];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 5 zeros
+    else if( stringLength( valStr ) == 3 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = '0';
+        baseStr[1] = '0';
+        baseStr[2] = '0';
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[0];
+        offStr[1] = valStr[1];
+        offStr[2] = valStr[2];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 4 zeros
+    else if( stringLength( valStr ) == 4 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = '0';
+        baseStr[1] = '0';
+        baseStr[2] = valStr[0];
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[1];
+        offStr[1] = valStr[2];
+        offStr[2] = valStr[3];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 3 zeros
+    else if( stringLength( valStr ) == 5 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = '0';
+        baseStr[1] = valStr[0];
+        baseStr[2] = valStr[1];
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[2];
+        offStr[1] = valStr[3];
+        offStr[2] = valStr[4];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 2 zeros
+    else if( stringLength( valStr ) == 6 )
+    {
+        segStr[0] = '0';
+        segStr[1] = '0';
+        segStr[2] = '\0';
+
+        baseStr[0] = valStr[0];
+        baseStr[1] = valStr[1];
+        baseStr[2] = valStr[2];
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[3];
+        offStr[1] = valStr[4];
+        offStr[2] = valStr[5];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with 1 zero
+    else if( stringLength( valStr ) == 7 )
+    {
+        segStr[0] = '0';
+        segStr[1] = valStr[0];
+        segStr[2] = '\0';
+
+        baseStr[0] = valStr[1];
+        baseStr[1] = valStr[2];
+        baseStr[2] = valStr[3];
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[4];
+        offStr[1] = valStr[5];
+        offStr[2] = valStr[6];
+        offStr[3] = '\0';
+    }
+    // M opCode value lead with no zeros
+    else if( stringLength( valStr ) == 8 )
+    {
+        segStr[0] = valStr[0];
+        segStr[1] = valStr[1];
+        segStr[2] = '\0';
+
+        baseStr[0] = valStr[2];
+        baseStr[1] = valStr[3];
+        baseStr[2] = valStr[4];
+        baseStr[3] = '\0';
+
+        offStr[0] = valStr[5];
+        offStr[1] = valStr[6];
+        offStr[2] = valStr[7];
+        offStr[3] = '\0';
+    }
+    else
     {
         return -1;
     }
-
-    segStr[0] = valStr[0];
-    segStr[1] = valStr[1];
-    segStr[2] = '\0';
-
-    baseStr[0] = valStr[2];
-    baseStr[1] = valStr[3];
-    baseStr[2] = valStr[4];
-    baseStr[3] = '\0';
-
-    offStr[0] = valStr[5];
-    offStr[1] = valStr[6];
-    offStr[2] = valStr[7];
-    offStr[3] = '\0';
 
     int sid = stringToInt( segStr );
     int base = stringToInt( baseStr );
     int offset = stringToInt( offStr );
 
     snprintf( logStr, STD_LOG_STR,
-              "Process %d, MMU Access: %d/%d/%d",
-              currBlock->pid, sid, base, offset );
+              "Process %d, MMU Access: %s/%s/%s",
+              currBlock->pid, segStr, baseStr, offStr );
     logAction( logStr, configData, logList );
 
     MMUNode *currNode = MMUListFirst( mmu );
