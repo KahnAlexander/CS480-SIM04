@@ -55,3 +55,44 @@ MORE NOTES
 TIMER
 	-takes in a time, pid, desc text, opCode command
 	-spin
+
+
+
+NOTES WITH STEPHEN
+	If IO op found,
+		create master struct
+		create thread and pass in master struct
+		within thread
+			fork process
+				child runs timer here
+				child exits
+				parent does waitpid(pid, NULL, 0) // this waits for the specific child process
+				like
+
+						pid_t pid;
+						pid = fork()
+						if pid=0, do child stuff ,
+						else do parent stuff
+
+				once wait is done, mutex lock
+
+				add data to master struct
+					log file line
+					interrupt node should be last thing to do before freeing/nulling
+				null out pointers in master struct
+				free master struct
+				unlock mutex
+
+			pthread_exit
+	If P
+		start cycle
+		after cycle
+			check if quantum time done
+				exit opCode
+			decrement cycles
+			check for interrupt
+				put p in Ready
+				process interrupt, put that pcb in Ready
+	If M
+		attempt allocation, access like normal
+		at end of opCode, check for interrupts
