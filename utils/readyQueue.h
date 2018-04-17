@@ -6,17 +6,16 @@ Secret Number: 764819
 */
 // Header File Information /////////////////////////////////////
 /**
-* @file logList.h
+* @file
 *
-* @brief Header file for logList code
+* @brief
 *
-* @details Specifies functions, constants, and other information
-* related to the logList code
+* @details
 */
 // Precompiler Directives //////////////////////////////////////////
 //
-#ifndef INT_QUEUE_H
-#define INT_QUEUE_H
+#ifndef READY_QUEUE_H
+#define READY_QUEUE_H
 //
 // Header Files ///////////////////////////////////////////////////
 //
@@ -28,37 +27,27 @@ Secret Number: 764819
 //
 // Data Structure Definitions (structs, enums, etc.)////////////////
 //
-typedef struct Interrupt
-{
-    struct Interrupt *next;
-    int pid;
-} Interrupt;
-
-typedef struct InterruptQueue
+typedef struct ReadyQueue
 {
 	int count;
-	Interrupt *first;
-} InterruptQueue;
+	ProcessControlBlock *first;
+} ReadyQueue;
 //
 // Free Function Prototypes ///////////////////////////////////////
 //
 //==========================================================================
 
-void enqueue( InterruptQueue *queue, Interrupt *interrupt );
+void enqueue( ReadyQueue *queue, ProcessControlBlock *pcb );
 
 //==========================================================================
 
-Interrupt *dequeue( InterruptQueue *queue );
+ProcessControlBlock *dequeue( ReadyQueue *queue );
 
 //==========================================================================
 
-Interrupt *createInterrupt( int pid );
-
-//==========================================================================
-
-InterruptQueue *createInterruptQueue();
+ProcessControlBlock *createReadyQueue();
 
 // Terminating Precompiler Directives ///////////////////////////////
 //
-#endif // INT_QUEUE_H
+#endif // READY_QUEUE_H
 //

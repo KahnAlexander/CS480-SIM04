@@ -6,7 +6,7 @@ Secret Number: 764819
 */
 // Code Implementation File Information /////////////////////////////
 /**
-* @file interruptQueue.c
+* @file
 *
 * @brief
 *
@@ -18,7 +18,7 @@ Secret Number: 764819
 */
 // Header Files ///////////////////////////////////////////////////
 //
-#include "interruptQueue.h"
+#include "readyQueue.h"
 //
 // Global Constant Definitions ////////////////////////////////////
 //
@@ -40,22 +40,22 @@ Secret Number: 764819
 *
 * @return
 */
-void enqueue( InterruptQueue *queue, Interrupt *interrupt )
+void enqueue( ReadyQueue *queue, ProcessControlBlock *pcb )
 {
     if( queue->first == NULL && queue->count == 0 )
     {
-        queue->first = interrupt;
+        queue->first = pcb;
         queue->count++;
         return;
     }
 
-    Interrupt *currInt = queue->first;
-    while( currInt->next != NULL )
+    ProcessControlBlock *currBlock = queue->first;
+    while( currBlock->next != NULL )
     {
-        currInt = currInt->next;
+        currBlock = currBlock->next;
     }
 
-    currInt->next = interrupt;
+    currBlock->next = pcb;
     queue->count++;
     return;
 }
@@ -74,13 +74,13 @@ void enqueue( InterruptQueue *queue, Interrupt *interrupt )
 *
 * @return
 */
-Interrupt *dequeue( InterruptQueue *queue )
+ProcessControlBlock *dequeue( ReadyQueue *queue )
 {
-    Interrupt *returnInt = queue->first;
+    ProcessControlBlock *returnBlock = queue->first;
     queue->first = queue->first->next;
     queue->count--;
 
-    return returnInt;
+    return returnBlock;
 }
 
 //==========================================================================
@@ -97,38 +97,14 @@ Interrupt *dequeue( InterruptQueue *queue )
 *
 * @return
 */
-Interrupt *createInterrupt( int pid )
+ProcessControlBlock *createReadyQueue()
 {
-    Interrupt *returnInt = malloc( sizeof( Interrupt ) );
-    returnInt->pid = pid;
-    returnInt->next = NULL;
-
-    return returnInt;
-}
-
-//==========================================================================
-/**
-* @brief
-*
-* @details
-*
-* @par Algorithm
-*
-*
-* @param[out]
-*
-*
-* @return
-*/
-InterruptQueue *createInterruptQueue()
-{
-    InterruptQueue *returnQueue = malloc( sizeof( InterruptQueue ) );
+    ReadyQueue *returnQueue = malloc( sizeof( ReadyQueue ) );
     returnQueue->first = NULL;
     returnQueue->count = 0;
 
     return returnQueue;
 }
-
 
 //==========================================================================
 // Terminating Precompiler Directives ///////////////////////////////
