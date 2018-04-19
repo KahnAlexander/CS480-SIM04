@@ -10,11 +10,12 @@ LFLAGS = -Wall -std=c99 -pedantic -pthread $(DEBUG)
 sim04 : $(OBJDIR)/main.o $(OBJDIR)/configParser.o $(OBJDIR)/metadataParser.o \
 $(OBJDIR)/processList.o $(OBJDIR)/metadataList.o $(OBJDIR)/simulator.o \
 $(OBJDIR)/logList.o $(OBJDIR)/simtimer.o $(OBJDIR)/utilities.o\
-$(OBJDIR)/mmuList.o $(OBJDIR)/interruptQueue.o
+$(OBJDIR)/mmuList.o $(OBJDIR)/interruptQueue.o $(OBJDIR)/readyQueue.o
 	$(CC) $(LFLAGS) $(OBJDIR)/main.o $(OBJDIR)/configParser.o \
     $(OBJDIR)/metadataParser.o $(OBJDIR)/metadataList.o $(OBJDIR)/utilities.o \
     $(OBJDIR)/processList.o $(OBJDIR)/simulator.o $(OBJDIR)/logList.o \
-    $(OBJDIR)/simtimer.o $(OBJDIR)/mmuList.o $(OBJDIR)/interruptQueue.o -o sim04
+    $(OBJDIR)/simtimer.o $(OBJDIR)/mmuList.o $(OBJDIR)/interruptQueue.o \
+	$(OBJDIR)/readyQueue.o -o sim04
 
 
 $(OBJDIR)/main.o : src/main.c parse/configParser.h parse/metadataParser.h \
@@ -62,6 +63,10 @@ $(OBJDIR)/simtimer.o : utils/simtimer.c utils/simtimer.h
 
 $(OBJDIR)/interruptQueue.o : utils/interruptQueue.c utils/interruptQueue.h
 	$(CC) $(CFLAGS) utils/interruptQueue.c -o $(OBJDIR)/interruptQueue.o
+
+
+$(OBJDIR)/readyQueue.o : utils/readyQueue.c utils/readyQueue.h
+	$(CC) $(CFLAGS) utils/readyQueue.c -o $(OBJDIR)/readyQueue.o
 
 
 .PHONY: clean

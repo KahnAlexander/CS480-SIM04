@@ -20,7 +20,7 @@ Secret Number: 764819
 //
 // Header Files ///////////////////////////////////////////////////
 //
-///// NONE
+#include <stdlib.h>
 //
 // Global Constant Definitions ////////////////////////////////////
 //
@@ -44,11 +44,11 @@ typedef struct InterruptQueue
 //
 //==========================================================================
 
-void enqueue( InterruptQueue *queue, Interrupt *interrupt );
+void enqueueInt( InterruptQueue *queue, Interrupt *interrupt );
 
 //==========================================================================
 
-Interrupt *dequeue( InterruptQueue *queue );
+Interrupt *dequeueInt( InterruptQueue *queue );
 
 //==========================================================================
 

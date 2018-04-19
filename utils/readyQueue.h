@@ -19,7 +19,8 @@ Secret Number: 764819
 //
 // Header Files ///////////////////////////////////////////////////
 //
-///// NONE
+#include <stdlib.h>
+#include "processList.h"
 //
 // Global Constant Definitions ////////////////////////////////////
 //
@@ -37,15 +38,15 @@ typedef struct ReadyQueue
 //
 //==========================================================================
 
-void enqueue( ReadyQueue *queue, ProcessControlBlock *pcb );
+void enqueuePCB( ReadyQueue *queue, ProcessControlBlock *pcb );
 
 //==========================================================================
 
-ProcessControlBlock *dequeue( ReadyQueue *queue );
+ProcessControlBlock *dequeuePCB( ReadyQueue *queue );
 
 //==========================================================================
 
-ProcessControlBlock *createReadyQueue();
+ReadyQueue *createReadyQueue();
 
 // Terminating Precompiler Directives ///////////////////////////////
 //

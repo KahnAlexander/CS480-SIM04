@@ -40,7 +40,7 @@ Secret Number: 764819
 *
 * @return
 */
-void enqueue( InterruptQueue *queue, Interrupt *interrupt )
+void enqueueInt( InterruptQueue *queue, Interrupt *interrupt )
 {
     if( queue->first == NULL && queue->count == 0 )
     {
@@ -74,7 +74,7 @@ void enqueue( InterruptQueue *queue, Interrupt *interrupt )
 *
 * @return
 */
-Interrupt *dequeue( InterruptQueue *queue )
+Interrupt *dequeueInt( InterruptQueue *queue )
 {
     Interrupt *returnInt = queue->first;
     queue->first = queue->first->next;

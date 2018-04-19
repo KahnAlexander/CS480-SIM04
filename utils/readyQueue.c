@@ -40,7 +40,7 @@ Secret Number: 764819
 *
 * @return
 */
-void enqueue( ReadyQueue *queue, ProcessControlBlock *pcb )
+void enqueuePCB( ReadyQueue *queue, ProcessControlBlock *pcb )
 {
     if( queue->first == NULL && queue->count == 0 )
     {
@@ -74,7 +74,7 @@ void enqueue( ReadyQueue *queue, ProcessControlBlock *pcb )
 *
 * @return
 */
-ProcessControlBlock *dequeue( ReadyQueue *queue )
+ProcessControlBlock *dequeuePCB( ReadyQueue *queue )
 {
     ProcessControlBlock *returnBlock = queue->first;
     queue->first = queue->first->next;
@@ -97,7 +97,7 @@ ProcessControlBlock *dequeue( ReadyQueue *queue )
 *
 * @return
 */
-ProcessControlBlock *createReadyQueue()
+ReadyQueue *createReadyQueue()
 {
     ReadyQueue *returnQueue = malloc( sizeof( ReadyQueue ) );
     returnQueue->first = NULL;
