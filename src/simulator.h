@@ -79,7 +79,11 @@ void logListToFile( Config *configData, LogList *logList );
 
 //==========================================================================
 
-void runThread( int threadTime );
+void runNonpreemptiveThread( int threadTime );
+
+//==========================================================================
+
+void runPreemptiveThread( int threadTime );
 
 //==========================================================================
 
@@ -87,7 +91,13 @@ ProcessControlBlock *findShortestJob( ProcessList *procList );
 
 //==========================================================================
 
-void processOpCodes( MetadataNode *currOp, Config *configData,
+void processOpCodesNonpreemptive( MetadataNode *currOp, Config *configData,
+                    LogList *logList, ProcessControlBlock *currBlock,
+                    char *logStr, MMUList *mmu );
+
+//==========================================================================
+
+void processOpCodesPreemptive( MetadataNode *currOp, Config *configData,
                     LogList *logList, ProcessControlBlock *currBlock,
                     char *logStr, MMUList *mmu );
 

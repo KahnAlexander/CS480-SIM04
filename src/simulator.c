@@ -251,7 +251,7 @@ void runFCFS( Config *configData, ProcessList *procList, LogList *logList,
                   "OS: Process %d set in Running state", currBlock->pid );
         logAction( logStr, configData, logList );
 
-        processOpCodes( currBlock->processHead, configData, logList, currBlock,
+        processOpCodesNonpreemptive( currBlock->processHead, configData, logList, currBlock,
                         logStr, mmu );
 
         endProcess( mmu, currBlock );
@@ -304,7 +304,7 @@ void runSJFN( Config *configData, ProcessList *procList, LogList *logList,
                   "OS: Process %d set in Running state", currBlock->pid );
         logAction( logStr, configData, logList );
 
-        processOpCodes( currBlock->processHead, configData, logList, currBlock,
+        processOpCodesNonpreemptive( currBlock->processHead, configData, logList, currBlock,
                         logStr, mmu );
 
         endProcess( mmu, currBlock );
@@ -342,7 +342,13 @@ void runSJFN( Config *configData, ProcessList *procList, LogList *logList,
 void runSRTF( Config *configData, ProcessList *procList, LogList *logList,
                 MMUList *mmu )
 {
-    // create interrupt queue, loop processing, and check after each cycle
+    // initialize the PCB queue
+	// init log string
+
+	// loop while ... currBlock is not null? while some pcb still ready?
+	// 		print start process
+	// 		set state to running, log, processOpCodes
+	// 		...
     return;
 }
 
@@ -436,7 +442,7 @@ void logListToFile( Config *configData, LogList *logList )
 * @param[in] threadTime
 *   A integer representing the milliseconds to run the thread for.
 */
-void runThread( int threadTime )
+void runNonpreemptiveThread( int threadTime )
 {
     int *runTime = &threadTime;
     pthread_t tid;
@@ -444,6 +450,20 @@ void runThread( int threadTime )
     pthread_create( &tid, NULL, runTimer, (void *)runTime );
     pthread_join( tid, NULL );
 
+    return;
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in] threadTime
+*   A integer representing the milliseconds to run the thread for.
+*/
+void runPreemptiveThread( int threadTime )
+{
     return;
 }
 
@@ -515,7 +535,7 @@ ProcessControlBlock *findShortestJob( ProcessList *procList )
 *   A pointer to an MMUList struct storing allocs
 *
 */
-void processOpCodes( MetadataNode *currOp, Config *configData,
+void processOpCodesNonpreemptive( MetadataNode *currOp, Config *configData,
                     LogList *logList, ProcessControlBlock *currBlock,
                     char *logStr, MMUList *mmu )
 {
@@ -532,7 +552,7 @@ void processOpCodes( MetadataNode *currOp, Config *configData,
                       "Process %d, run operation start", currBlock->pid );
             logAction( logStr, configData, logList );
 
-            runThread( configData->pCycleTime * currOp->value );
+            runNonpreemptiveThread( configData->pCycleTime * currOp->value );
 
             snprintf( logStr, STD_LOG_STR,
                       "Process %d, run operation end", currBlock->pid );
@@ -545,7 +565,7 @@ void processOpCodes( MetadataNode *currOp, Config *configData,
                       currBlock->pid, currOp->operation );
             logAction( logStr, configData, logList );
 
-            runThread( configData->ioCycleTime * currOp->value );
+            runNonpreemptiveThread( configData->ioCycleTime * currOp->value );
 
             snprintf( logStr, STD_LOG_STR,
                       "Process %d, %s input end",
@@ -559,7 +579,118 @@ void processOpCodes( MetadataNode *currOp, Config *configData,
                       currBlock->pid, currOp->operation );
             logAction( logStr, configData, logList );
 
-            runThread( configData->ioCycleTime * currOp->value );
+            runNonpreemptiveThread( configData->ioCycleTime * currOp->value );
+
+            snprintf( logStr, STD_LOG_STR,
+                      "Process %d, %s output end",
+                      currBlock->pid, currOp->operation );
+            logAction( logStr, configData, logList );
+        }
+        else if( currOp->command == 'M' )
+        {
+            if( stringCompare( currOp->operation, "allocate" ) == 0 )
+            {
+                if( allocateMem( currOp->value, mmu, currBlock, configData,
+                            logList ) == -1 )
+                {
+                    snprintf( logStr, STD_LOG_STR,
+                        "OS: Process %d, Segmentation Fault - Process ended",
+                        currBlock->pid );
+                    logAction( logStr, configData, logList );
+                    break;
+                }
+            }
+            else if( stringCompare( currOp->operation, "access" ) == 0 )
+            {
+                if( accessMem( currOp->value, mmu, currBlock, configData,
+                            logList ) == -1 )
+                {
+                    snprintf( logStr, STD_LOG_STR,
+                        "OS: Process %d, Segmentation Fault - Process ended",
+                        currBlock->pid );
+                    logAction( logStr, configData, logList );
+                    break;
+                }
+            }
+        }
+
+        currOp = currOp->next;
+    }
+}
+
+//======================================================================
+/**
+* @brief Function
+*
+* @details Function
+*
+* @param[in] currOp
+*   A pointer to the head MetadataNode of a PCB
+*
+* @param[in] configData
+*   A pointer to a Config struct storing the given configuration data
+*
+* @param[in] logList
+*   A pointer to a logList struct storing the created logs
+*
+* @param[in] currBlock
+*   A pointer to the ProcessControlBlock being processed
+*
+* @param[in] logStr
+*   A char pointer to the string to be logged in file or monitor
+*
+* @param[in] mmu
+*   A pointer to an MMUList struct storing allocs
+*
+*/
+void processOpCodesPreemptive( MetadataNode *currOp, Config *configData,
+                    LogList *logList, ProcessControlBlock *currBlock,
+                    char *logStr, MMUList *mmu )
+{
+    while( stringCompare( currOp->operation, "end" ) != 0 )
+    {
+        if( currOp->command == 'A' )
+        {
+            currOp = currOp->next;
+            continue;
+        }
+        else if( currOp->command == 'P' )
+        {
+            snprintf( logStr, STD_LOG_STR,
+                      "Process %d, run operation start", currBlock->pid );
+            logAction( logStr, configData, logList );
+
+			// make me run/check cycles
+            runPreemptiveThread( configData->pCycleTime * currOp->value );
+
+            snprintf( logStr, STD_LOG_STR,
+                      "Process %d, run operation end", currBlock->pid );
+            logAction( logStr, configData, logList );
+        }
+        else if( currOp->command == 'I' )
+        {
+            snprintf( logStr, STD_LOG_STR,
+                      "Process %d, %s input start",
+                      currBlock->pid, currOp->operation );
+            logAction( logStr, configData, logList );
+
+			// make me preemptive
+            runPreemptiveThread( configData->ioCycleTime * currOp->value );
+
+            snprintf( logStr, STD_LOG_STR,
+                      "Process %d, %s input end",
+                      currBlock->pid, currOp->operation );
+            logAction( logStr, configData, logList );
+        }
+        else if( currOp->command == 'O' )
+        {
+            snprintf( logStr, STD_LOG_STR,
+                      "Process %d, %s output start",
+                      currBlock->pid, currOp->operation );
+            logAction( logStr, configData, logList );
+
+			// make me preemptive
+            runPreemptiveThread( configData->ioCycleTime * currOp->value );
 
             snprintf( logStr, STD_LOG_STR,
                       "Process %d, %s output end",
