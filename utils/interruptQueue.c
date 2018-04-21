@@ -97,10 +97,10 @@ Interrupt *dequeueInt( InterruptQueue *queue )
 *
 * @return
 */
-Interrupt *createInterrupt( int pid )
+Interrupt *createInterrupt( ProcessControlBlock *pcb )
 {
     Interrupt *returnInt = malloc( sizeof( Interrupt ) );
-    returnInt->pid = pid;
+    returnInt->pcb = pcb;
     returnInt->next = NULL;
 
     return returnInt;

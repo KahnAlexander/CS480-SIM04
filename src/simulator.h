@@ -27,6 +27,7 @@ Secret Number: 764819
 #include "logList.h"
 #include "configParser.h"
 #include "mmuList.h"
+#include "interruptQueue.h"
 //
 // Free Function Prototypes ///////////////////////////////////////
 //
@@ -97,9 +98,9 @@ void processOpCodesNonpreemptive( MetadataNode *currOp, Config *configData,
 
 //==========================================================================
 
-void processOpCodesPreemptive( MetadataNode *currOp, Config *configData,
-                    LogList *logList, ProcessControlBlock *currBlock,
-                    char *logStr, MMUList *mmu );
+void processOpCodesPreemptive( Config *configData, LogList *logList,
+				ProcessControlBlock *currBlock, char *logStr, MMUList *mmu,
+			 	InterruptQueue *intQueue );
 
 //==========================================================================
 
@@ -118,6 +119,19 @@ void endProcess( MMUList *mmu, ProcessControlBlock *currBlock );
 //==========================================================================
 
 MMUNode *removeAlloc( MMUList *mmu, MMUNode *alloc );
+
+//==========================================================================
+
+int listEmpty( ProcessList *procList );
+
+//==========================================================================
+
+ProcessControlBlock *getNextReady( ProcessList *procList );
+
+//==========================================================================
+
+void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
+ 						char *logStr, Config *configData, LogList *logList );
 
 // Terminating Precompiler Directives ///////////////////////////////
 //

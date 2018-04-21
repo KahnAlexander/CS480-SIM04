@@ -61,7 +61,7 @@ TIMER
 NOTES WITH STEPHEN
 	If IO op found,
 		create master struct
-		create thread and pass in master struct
+		create thread and pass in master struct, detach right after creation
 		within thread
 			fork process
 				child runs timer here
@@ -96,3 +96,7 @@ NOTES WITH STEPHEN
 	If M
 		attempt allocation, access like normal
 		at end of opCode, check for interrupts
+
+FCFS-P
+
+	All PCBs in Ready

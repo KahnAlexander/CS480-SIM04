@@ -374,7 +374,39 @@ void runSRTF( Config *configData, ProcessList *procList, LogList *logList,
 void runFCFSP( Config *configData, ProcessList *procList, LogList *logList,
                 MMUList *mmu )
 {
-    // create interrupt queue, loop processing, and check after each cycle
+	ProcessControlBlock *currBlock = NULL;
+    char logStr[ STD_LOG_STR ];
+	InterruptQueue *intQueue = createInterruptQueue();
+
+    while( listEmpty( procList ) == 0 )
+    {
+		// selecting Processes for FCFS-P
+		currBlock = getNextReady( procList );
+
+		// this is used for CPU idle, ie waiting for blocked pcbs to go to READY
+		if( currBlock == NULL )
+		{
+			checkForInterrupts( currBlock, intQueue, logStr, configData,
+								logList );
+			continue;
+		}
+
+		snprintf( logStr, STD_LOG_STR,
+                  "OS: FCFS-P Strategy selects Process %d with time: %d mSec",
+                  currBlock->pid, currBlock->processTime );
+        logAction( logStr, configData, logList );
+
+        currBlock->state = RUN;
+        snprintf( logStr, STD_LOG_STR,
+                  "OS: Process %d set in Running state", currBlock->pid );
+        logAction( logStr, configData, logList );
+
+        processOpCodesPreemptive( configData, logList, currBlock, logStr, mmu,
+		 							intQueue );
+    }
+
+    logAction( "System End", configData, logList );
+
     return;
 }
 
@@ -643,15 +675,19 @@ void processOpCodesNonpreemptive( MetadataNode *currOp, Config *configData,
 *   A pointer to an MMUList struct storing allocs
 *
 */
-void processOpCodesPreemptive( MetadataNode *currOp, Config *configData,
-                    LogList *logList, ProcessControlBlock *currBlock,
-                    char *logStr, MMUList *mmu )
+void processOpCodesPreemptive( Config *configData, LogList *logList,
+					ProcessControlBlock *currBlock, char *logStr, MMUList *mmu,
+				 	InterruptQueue *intQueue )
 {
+	MetadataNode *currOp = NULL;
+
     while( stringCompare( currOp->operation, "end" ) != 0 )
     {
+		currOp = currBlock->processHead;
+
         if( currOp->command == 'A' )
         {
-            currOp = currOp->next;
+            currBlock->processHead = currBlock->processHead->next;
             continue;
         }
         else if( currOp->command == 'P' )
@@ -660,12 +696,47 @@ void processOpCodesPreemptive( MetadataNode *currOp, Config *configData,
                       "Process %d, run operation start", currBlock->pid );
             logAction( logStr, configData, logList );
 
-			// make me run/check cycles
-            runPreemptiveThread( configData->pCycleTime * currOp->value );
+			// void pointer argument for runTimer
+			int *cycleTimePtr = &configData->pCycleTime;
 
-            snprintf( logStr, STD_LOG_STR,
-                      "Process %d, run operation end", currBlock->pid );
-            logAction( logStr, configData, logList );
+			for( int index = 0; index < currOp->value; index++ )
+			{
+				// run one cycle, decrement cycle count, decrease process time
+				runTimer( cycleTimePtr );
+				currBlock->processTime -= configData->pCycleTime;
+				currOp->value--;
+
+				// does one cycle, checks for any interrupts on the queue
+				checkForInterrupts( currBlock, intQueue, logStr, configData,
+									logList );
+
+				// check for quantum time
+				if( index == configData->quantumTime )
+				{
+					snprintf( logStr, STD_LOG_STR,
+		                      "Process %d quantum time out", currBlock->pid );
+		            logAction( logStr, configData, logList );
+
+					currBlock->state = READY;
+					snprintf( logStr, STD_LOG_STR,
+		                      "Process %d set in Ready state", currBlock->pid );
+		            logAction( logStr, configData, logList );
+
+					return;
+				}
+			}
+
+			// if P(run) is done, move to next opCode
+			if( currOp->value == 0 )
+			{
+				snprintf( logStr, STD_LOG_STR,
+					"Process %d, run operation end", currBlock->pid );
+					logAction( logStr, configData, logList );
+
+				currBlock->processHead = currBlock->processHead->next;
+				checkForInterrupts( currBlock, intQueue, logStr, configData,
+									logList );
+			}
         }
         else if( currOp->command == 'I' )
         {
@@ -723,10 +794,16 @@ void processOpCodesPreemptive( MetadataNode *currOp, Config *configData,
                     break;
                 }
             }
-        }
 
-        currOp = currOp->next;
+			currBlock->processHead = currBlock->processHead->next;
+			checkForInterrupts( currBlock, intQueue, logStr, configData,
+								logList );
+        }
     }
+	endProcess( mmu, currBlock );
+	snprintf( logStr, STD_LOG_STR,
+			  "OS: Process %d set in Exit state", currBlock->pid );
+	logAction( logStr, configData, logList );
 }
 
 //======================================================================
@@ -1219,6 +1296,119 @@ MMUNode *removeAlloc( MMUList *mmu, MMUNode *alloc )
         currAlloc = currAlloc->next;
     }
     return NULL;
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in]
+*
+* @param[out]
+*
+*/
+int listEmpty( ProcessList *procList )
+{
+    ProcessControlBlock *currBlock = procListFirst( procList );
+
+	while( currBlock != NULL )
+	{
+		if( currBlock->state != EXIT )
+		{
+			return 0;
+		}
+		currBlock = currBlock->next;
+	}
+	return 1;
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in]
+*
+* @param[out]
+*
+*/
+ProcessControlBlock *getNextReady( ProcessList *procList )
+{
+    ProcessControlBlock *currBlock = procListFirst( procList );
+
+	while( currBlock != NULL )
+	{
+		if( currBlock->state == READY )
+		{
+			return currBlock;
+		}
+		currBlock = currBlock->next;
+	}
+	return NULL;
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in]
+*
+* @param[out]
+*
+*/
+void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
+ 						char *logStr, Config *configData, LogList *logList )
+{
+	Interrupt *interrupt = NULL;
+
+	while( intQueue->count != 0 )
+	{
+		interrupt = dequeueInt( intQueue );
+
+		snprintf( logStr, STD_LOG_STR,
+				  "OS: Interrupt, Process %d", interrupt->pcb->pid );
+		logAction( logStr, configData, logList );
+
+		if( pcb != NULL )
+		{
+			pcb->state = READY;
+			snprintf( logStr, STD_LOG_STR,
+	                  "OS: Process %d set in Ready state", pcb->pid );
+	        logAction( logStr, configData, logList );
+
+			pcb = NULL;
+		}
+
+		if( interrupt->pcb->processHead->command == 'I' )
+		{
+			snprintf( logStr, STD_LOG_STR,
+				"OS: Process %d, %s Input end", interrupt->pcb->pid,
+				interrupt->pcb->processHead->operation );
+			logAction( logStr, configData, logList );
+		}
+		else if( interrupt->pcb->processHead->command == 'O' )
+		{
+			snprintf( logStr, STD_LOG_STR,
+				"OS: Process %d, %s Output end", interrupt->pcb->pid,
+				interrupt->pcb->processHead->operation );
+			logAction( logStr, configData, logList );
+		}
+
+		interrupt->pcb->state = READY;
+		snprintf( logStr, STD_LOG_STR,
+				  "OS: Process %d set in Ready state",
+				  interrupt->pcb->pid );
+		logAction( logStr, configData, logList );
+
+		free( interrupt );
+		interrupt = NULL;
+	}
+	return;
 }
 
 // Terminating Precompiler Directives ///////////////////////////////

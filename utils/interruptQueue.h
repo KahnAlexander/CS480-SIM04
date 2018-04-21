@@ -21,6 +21,7 @@ Secret Number: 764819
 // Header Files ///////////////////////////////////////////////////
 //
 #include <stdlib.h>
+#include "processList.h"
 //
 // Global Constant Definitions ////////////////////////////////////
 //
@@ -31,7 +32,7 @@ Secret Number: 764819
 typedef struct Interrupt
 {
     struct Interrupt *next;
-    int pid;
+    ProcessControlBlock *pcb;
 } Interrupt;
 
 typedef struct InterruptQueue
@@ -52,7 +53,7 @@ Interrupt *dequeueInt( InterruptQueue *queue );
 
 //==========================================================================
 
-Interrupt *createInterrupt( int pid );
+Interrupt *createInterrupt( ProcessControlBlock *pcb );
 
 //==========================================================================
 
