@@ -20,16 +20,11 @@ using a timer and threads to run each operation code.
 */
 // Header Files ///////////////////////////////////////////////////
 //
-#include <pthread.h>
-#include <stdio.h>
-#include "processList.h"
-#include "metadataList.h"
-#include "utilities.h"
-#include "logList.h"
-#include "simtimer.h"
-#include "configParser.h"
 #include "simulator.h"
-#include "mmuList.h"
+//
+//// Global Variables
+//
+pthread_mutex_t mutex;
 //
 // Free Function Prototypes ///////////////////////////////////////
 //
@@ -402,7 +397,7 @@ void runFCFSP( Config *configData, ProcessList *procList, LogList *logList,
         logAction( logStr, configData, logList );
 
         processOpCodesPreemptive( configData, logList, currBlock, logStr, mmu,
-		 							intQueue );
+		 							intQueue, procList );
     }
 
     logAction( "System End", configData, logList );
@@ -494,9 +489,60 @@ void runNonpreemptiveThread( int threadTime )
 * @param[in] threadTime
 *   A integer representing the milliseconds to run the thread for.
 */
-void runPreemptiveThread( int threadTime )
+void runPreemptiveThread( ThreadContainer *container )
 {
-    return;
+	pthread_t tid;
+	pthread_attr_t attr;
+	pthread_attr_init( &attr );
+
+	pthread_create( &tid, &attr, runConcurrentThread, container );
+	pthread_detach( tid );
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in]
+*
+* @param[out]
+*
+*/
+void *runConcurrentThread( void *container )
+{
+	ThreadContainer *threadContainer = ( ThreadContainer * )( container );
+
+	pid_t pid;
+	pid = fork();
+
+	if( pid == 0 )
+	{
+		int *waitTime = &threadContainer->waitTime;
+		runTimer( ( void * )( waitTime ) );
+		exit( 0 );
+	}
+	else
+	{
+		waitpid( pid, NULL, 0 );
+
+		pthread_mutex_lock( &mutex );
+
+		threadContainer->currBlock->processTime -= threadContainer->waitTime;
+		threadContainer->currBlock->processHead =
+								threadContainer->currBlock->processHead->next;
+
+		enqueueInt( threadContainer->intQueue,
+					createInterrupt( threadContainer->currBlock ) );
+
+		threadContainer->currBlock = NULL;
+		threadContainer->intQueue = NULL;
+		free( threadContainer );
+
+		pthread_mutex_unlock( &mutex );
+	}
+	pthread_exit( 0 );
 }
 
 //======================================================================
@@ -677,9 +723,9 @@ void processOpCodesNonpreemptive( MetadataNode *currOp, Config *configData,
 */
 void processOpCodesPreemptive( Config *configData, LogList *logList,
 					ProcessControlBlock *currBlock, char *logStr, MMUList *mmu,
-				 	InterruptQueue *intQueue )
+				 	InterruptQueue *intQueue, ProcessList *procList )
 {
-	MetadataNode *currOp = NULL;
+	MetadataNode *currOp = currBlock->processHead;
 
     while( stringCompare( currOp->operation, "end" ) != 0 )
     {
@@ -698,32 +744,35 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
 
 			// void pointer argument for runTimer
 			int *cycleTimePtr = &configData->pCycleTime;
+			int index = 0;
+			int beginningCycles = currOp->value;
 
-			for( int index = 0; index < currOp->value; index++ )
+			while( index < currOp->value && index < configData->quantumTime )
 			{
 				// run one cycle, decrement cycle count, decrease process time
 				runTimer( cycleTimePtr );
 				currBlock->processTime -= configData->pCycleTime;
-				currOp->value--;
 
 				// does one cycle, checks for any interrupts on the queue
 				checkForInterrupts( currBlock, intQueue, logStr, configData,
 									logList );
 
+				index++;
 				// check for quantum time
-				if( index == configData->quantumTime )
+				if( index == configData->quantumTime &&
+					configData->quantumTime < currOp->value )
 				{
 					snprintf( logStr, STD_LOG_STR,
 		                      "Process %d quantum time out", currBlock->pid );
 		            logAction( logStr, configData, logList );
 
-					currBlock->state = READY;
-					snprintf( logStr, STD_LOG_STR,
-		                      "Process %d set in Ready state", currBlock->pid );
-		            logAction( logStr, configData, logList );
-
-					return;
+					currOp->value -= index;
+					break;
 				}
+			}
+			if( currOp->value == beginningCycles )
+			{
+				currOp->value -= index;
 			}
 
 			// if P(run) is done, move to next opCode
@@ -740,33 +789,55 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
         }
         else if( currOp->command == 'I' )
         {
+			ThreadContainer *container =
+				buildThreadContainer( configData, logList, intQueue, currBlock,
+						configData->ioCycleTime * currOp->value );
             snprintf( logStr, STD_LOG_STR,
                       "Process %d, %s input start",
                       currBlock->pid, currOp->operation );
             logAction( logStr, configData, logList );
 
-			// make me preemptive
-            runPreemptiveThread( configData->ioCycleTime * currOp->value );
-
-            snprintf( logStr, STD_LOG_STR,
-                      "Process %d, %s input end",
-                      currBlock->pid, currOp->operation );
+			currBlock->state = BLOCKED;
+			snprintf( logStr, STD_LOG_STR,
+                      "OS: Process %d set in Blocked state",
+                      currBlock->pid );
             logAction( logStr, configData, logList );
+
+            runPreemptiveThread( container );
+
+			if( getNextReady( procList ) == NULL )
+			{
+				snprintf( logStr, STD_LOG_STR,
+	                      "OS: CPU Idle" );
+	            logAction( logStr, configData, logList );
+			}
+			return;
         }
         else if( currOp->command == 'O' )
         {
+			ThreadContainer *container =
+				buildThreadContainer( configData, logList, intQueue, currBlock,
+						configData->ioCycleTime * currOp->value );
             snprintf( logStr, STD_LOG_STR,
                       "Process %d, %s output start",
                       currBlock->pid, currOp->operation );
             logAction( logStr, configData, logList );
 
-			// make me preemptive
-            runPreemptiveThread( configData->ioCycleTime * currOp->value );
-
-            snprintf( logStr, STD_LOG_STR,
-                      "Process %d, %s output end",
-                      currBlock->pid, currOp->operation );
+			currBlock->state = BLOCKED;
+			snprintf( logStr, STD_LOG_STR,
+                      "OS: Process %d set in Blocked state",
+                      currBlock->pid );
             logAction( logStr, configData, logList );
+
+            runPreemptiveThread( container );
+
+            if( getNextReady( procList ) == NULL )
+			{
+				snprintf( logStr, STD_LOG_STR,
+	                      "OS: CPU Idle" );
+	            logAction( logStr, configData, logList );
+			}
+			return;
         }
         else if( currOp->command == 'M' )
         {
@@ -1387,14 +1458,14 @@ void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
 		if( interrupt->pcb->processHead->command == 'I' )
 		{
 			snprintf( logStr, STD_LOG_STR,
-				"OS: Process %d, %s Input end", interrupt->pcb->pid,
+				"Process %d, %s Input end", interrupt->pcb->pid,
 				interrupt->pcb->processHead->operation );
 			logAction( logStr, configData, logList );
 		}
 		else if( interrupt->pcb->processHead->command == 'O' )
 		{
 			snprintf( logStr, STD_LOG_STR,
-				"OS: Process %d, %s Output end", interrupt->pcb->pid,
+				"Process %d, %s Output end", interrupt->pcb->pid,
 				interrupt->pcb->processHead->operation );
 			logAction( logStr, configData, logList );
 		}
@@ -1409,6 +1480,29 @@ void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
 		interrupt = NULL;
 	}
 	return;
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in]
+*
+* @param[out]
+*
+*/
+ThreadContainer *buildThreadContainer( Config *configData, LogList *logList,
+								InterruptQueue *intQueue,
+								ProcessControlBlock *currBlock, int waitTime )
+{
+	ThreadContainer *container = malloc( sizeof( ThreadContainer ) );
+	container->intQueue = intQueue;
+	container->currBlock = currBlock;
+	container->waitTime = waitTime;
+
+	return container;
 }
 
 // Terminating Precompiler Directives ///////////////////////////////

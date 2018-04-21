@@ -21,6 +21,11 @@ Secret Number: 764819
 //
 // Header Files ///////////////////////////////////////////////////
 //
+#include <pthread.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <wait.h>
 #include "processList.h"
 #include "metadataList.h"
 #include "utilities.h"
@@ -28,6 +33,17 @@ Secret Number: 764819
 #include "configParser.h"
 #include "mmuList.h"
 #include "interruptQueue.h"
+#include "simtimer.h"
+
+//
+// Data Structure Definitions (structs, enums, etc.)////////////////
+//
+typedef struct ThreadContainer
+{
+	InterruptQueue *intQueue;
+	ProcessControlBlock *currBlock;
+	int waitTime;
+} ThreadContainer;
 //
 // Free Function Prototypes ///////////////////////////////////////
 //
@@ -84,7 +100,11 @@ void runNonpreemptiveThread( int threadTime );
 
 //==========================================================================
 
-void runPreemptiveThread( int threadTime );
+void runPreemptiveThread( ThreadContainer *container );
+
+//==========================================================================
+
+void *runConcurrentThread( void *container );
 
 //==========================================================================
 
@@ -100,7 +120,7 @@ void processOpCodesNonpreemptive( MetadataNode *currOp, Config *configData,
 
 void processOpCodesPreemptive( Config *configData, LogList *logList,
 				ProcessControlBlock *currBlock, char *logStr, MMUList *mmu,
-			 	InterruptQueue *intQueue );
+			 	InterruptQueue *intQueue, ProcessList *procList );
 
 //==========================================================================
 
@@ -132,6 +152,12 @@ ProcessControlBlock *getNextReady( ProcessList *procList );
 
 void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
  						char *logStr, Config *configData, LogList *logList );
+
+//==========================================================================
+
+ThreadContainer *buildThreadContainer( Config *configData, LogList *logList,
+								InterruptQueue *intQueue,
+								ProcessControlBlock *currBlock, int waitTime );
 
 // Terminating Precompiler Directives ///////////////////////////////
 //
