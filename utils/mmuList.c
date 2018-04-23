@@ -93,7 +93,7 @@ MMUNode *createMMUNode( int pid, int sid, int base, int offset,
         MMUNode *currNode = MMUListFirst( mmu );
         while( currNode != NULL )
         {
-            if( currNode->sid == sid && currNode->pid == pid )
+            if( currNode->sid == sid )
             {
                 return NULL;
             }

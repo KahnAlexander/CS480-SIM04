@@ -33,6 +33,7 @@ Secret Number: 764819
 #include "configParser.h"
 #include "mmuList.h"
 #include "interruptQueue.h"
+#include "readyQueue.h"
 #include "simtimer.h"
 
 //
@@ -120,7 +121,8 @@ void processOpCodesNonpreemptive( MetadataNode *currOp, Config *configData,
 
 void processOpCodesPreemptive( Config *configData, LogList *logList,
 				ProcessControlBlock *currBlock, char *logStr, MMUList *mmu,
-			 	InterruptQueue *intQueue, ProcessList *procList );
+			 	InterruptQueue *intQueue, ProcessList *procList,
+				ReadyQueue *ready, ProcessList *blocked );
 
 //==========================================================================
 
@@ -146,18 +148,27 @@ int listEmpty( ProcessList *procList );
 
 //==========================================================================
 
+int queueEmpty( ReadyQueue *ready );
+
+//==========================================================================
+
 ProcessControlBlock *getNextReady( ProcessList *procList );
 
 //==========================================================================
 
 void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
- 						char *logStr, Config *configData, LogList *logList );
+ 						char *logStr, Config *configData, LogList *logList,
+					 	ReadyQueue *ready, ProcessList *blocked );
 
 //==========================================================================
 
 ThreadContainer *buildThreadContainer( Config *configData, LogList *logList,
 								InterruptQueue *intQueue,
 								ProcessControlBlock *currBlock, int waitTime );
+
+//==========================================================================
+
+void printPCBStatus( ReadyQueue *ready, ProcessList *blocked );
 
 // Terminating Precompiler Directives ///////////////////////////////
 //

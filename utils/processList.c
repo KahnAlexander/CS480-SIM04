@@ -94,6 +94,7 @@ ProcessControlBlock *createPCB( MetadataNode *process, int pid )
     node->processTime = 0;
     node->processHead = process;
     node->next = NULL;
+	node->nextInQueue = NULL;
 
     return node;
 }
@@ -370,6 +371,58 @@ void setReady( ProcessList *list )
         }
         currBlock = currBlock->next;
     }
+}
+
+//==========================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in]
+*/
+ProcessControlBlock *removeFirst( ProcessList *procList )
+{
+	ProcessControlBlock *returnBlock = procList->first;
+	procList->first = procList->first->next;
+	procList->count--;
+
+	returnBlock->next = NULL;
+	return returnBlock;
+}
+
+//==========================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in]
+*/
+void removeBlocked( ProcessList *procList, int pid )
+{
+	ProcessControlBlock *currBlock = procList->first;
+
+	if( currBlock->pid == pid )
+	{
+		procList->first = procList->first->next;
+		currBlock->next = NULL;
+		return;
+	}
+
+	while( currBlock->next != NULL )
+	{
+		if( currBlock->next->pid == pid )
+		{
+			ProcessControlBlock *temp = currBlock->next;
+			currBlock->next = currBlock->next->next;
+			temp->next = NULL;
+			return;
+		}
+		currBlock = currBlock->next;
+	}
+
+	return;
 }
 
 //==========================================================================

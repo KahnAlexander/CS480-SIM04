@@ -174,7 +174,7 @@ void runScheduler( Config *configData, ProcessList *procList, LogList *logList,
 */
 void logAction( char *logStr, Config *configData, LogList *logList )
 {
-    char *currTime = malloc( 10 );
+	char *currTime = malloc( 10 );
     char *properLogStr = malloc( STD_LOG_STR );
 
     if( stringCompare( logStr, "System Start" ) == 0 )
@@ -337,13 +337,39 @@ void runSJFN( Config *configData, ProcessList *procList, LogList *logList,
 void runSRTF( Config *configData, ProcessList *procList, LogList *logList,
                 MMUList *mmu )
 {
-    // initialize the PCB queue
-	// init log string
+    ProcessControlBlock *currBlock = NULL;
+    char logStr[ STD_LOG_STR ];
+	InterruptQueue *intQueue = createInterruptQueue();
 
-	// loop while ... currBlock is not null? while some pcb still ready?
-	// 		print start process
-	// 		set state to running, log, processOpCodes
-	// 		...
+    while( listEmpty( procList ) == 0 )
+    {
+		// selecting Processes for FCFS-P
+		currBlock = findShortestJob( procList );
+
+		// this is used for CPU idle, ie waiting for blocked pcbs to go to READY
+		if( currBlock == NULL )
+		{
+			checkForInterrupts( currBlock, intQueue, logStr, configData,
+								logList, NULL, NULL );
+			continue;
+		}
+
+		snprintf( logStr, STD_LOG_STR,
+                  "OS: SRTF-P Strategy selects Process %d with time: %d mSec",
+                  currBlock->pid, currBlock->processTime );
+        logAction( logStr, configData, logList );
+
+        currBlock->state = RUN;
+        snprintf( logStr, STD_LOG_STR,
+                  "OS: Process %d set in Running state", currBlock->pid );
+        logAction( logStr, configData, logList );
+
+        processOpCodesPreemptive( configData, logList, currBlock, logStr, mmu,
+		 							intQueue, procList, NULL, NULL );
+    }
+
+    logAction( "System End", configData, logList );
+
     return;
 }
 
@@ -382,7 +408,7 @@ void runFCFSP( Config *configData, ProcessList *procList, LogList *logList,
 		if( currBlock == NULL )
 		{
 			checkForInterrupts( currBlock, intQueue, logStr, configData,
-								logList );
+								logList, NULL, NULL );
 			continue;
 		}
 
@@ -397,7 +423,7 @@ void runFCFSP( Config *configData, ProcessList *procList, LogList *logList,
         logAction( logStr, configData, logList );
 
         processOpCodesPreemptive( configData, logList, currBlock, logStr, mmu,
-		 							intQueue, procList );
+		 							intQueue, procList, NULL, NULL );
     }
 
     logAction( "System End", configData, logList );
@@ -427,7 +453,88 @@ void runFCFSP( Config *configData, ProcessList *procList, LogList *logList,
 void runRRP( Config *configData, ProcessList *procList, LogList *logList,
                 MMUList *mmu )
 {
-    // create interrupt queue, loop processing, and check after each cycle
+	// ProcessControlBlock *currBlock = procListFirst( procList );
+    // char logStr[ STD_LOG_STR ];
+	// InterruptQueue *intQueue = createInterruptQueue();
+	// ReadyQueue *ready = createReadyQueue();
+	//
+	// while( currBlock != NULL )
+	// {
+	// 	enqueuePCB( ready, currBlock );
+	// 	currBlock = currBlock->next;
+	// }
+	//
+    // while( listEmpty( procList ) == 0 )
+    // {
+	// 	// selecting Processes for FCFS-P
+	// 	currBlock = dequeuePCB( ready );
+	//
+	// 	// this is used for CPU idle, ie waiting for blocked pcbs to go to READY
+	// 	if( currBlock == NULL )
+	// 	{
+	// 		checkForInterrupts( currBlock, intQueue, logStr, configData,
+	// 							logList, ready, NULL );
+	// 		continue;
+	// 	}
+	//
+	// 	snprintf( logStr, STD_LOG_STR,
+    //               "OS: RR-P Strategy selects Process %d with time: %d mSec",
+    //               currBlock->pid, currBlock->processTime );
+    //     logAction( logStr, configData, logList );
+	//
+    //     currBlock->state = RUN;
+    //     snprintf( logStr, STD_LOG_STR,
+    //               "OS: Process %d set in Running state", currBlock->pid );
+    //     logAction( logStr, configData, logList );
+	//
+    //     processOpCodesPreemptive( configData, logList, currBlock, logStr, mmu,
+	// 	 							intQueue, NULL, ready, NULL );
+    // }
+	//
+    // logAction( "System End", configData, logList );
+	//
+    // return;
+
+	ProcessControlBlock *currBlock = procListFirst( procList );
+    char logStr[ STD_LOG_STR ];
+	InterruptQueue *intQueue = createInterruptQueue();
+	ReadyQueue *ready = createReadyQueue();
+
+	while( currBlock != NULL )
+	{
+		enqueuePCB( ready, currBlock );
+		currBlock = currBlock->next;
+	}
+
+    while( listEmpty( procList ) == 0 ) // while there is at least one process not in EXIT
+    {
+		// selecting Processes for FCFS-P
+		currBlock = dequeuePCB( ready );
+
+		// this is used for CPU idle, ie waiting for blocked pcbs to go to READY
+		if( currBlock == NULL )
+		{
+			checkForInterrupts( currBlock, intQueue, logStr, configData,
+								logList, ready, NULL );
+			continue;
+		}
+
+		snprintf( logStr, STD_LOG_STR,
+                  "OS: RR-P Strategy selects Process %d with time: %d mSec",
+                  currBlock->pid, currBlock->processTime );
+        logAction( logStr, configData, logList );
+
+        currBlock->state = RUN;
+        snprintf( logStr, STD_LOG_STR,
+                  "OS: Process %d set in Running state", currBlock->pid );
+        logAction( logStr, configData, logList );
+
+        processOpCodesPreemptive( configData, logList, currBlock, logStr, mmu,
+		 							intQueue, procList, NULL, NULL );
+    }
+
+    logAction( "System End", configData, logList );
+
     return;
 }
 
@@ -530,8 +637,6 @@ void *runConcurrentThread( void *container )
 		pthread_mutex_lock( &mutex );
 
 		threadContainer->currBlock->processTime -= threadContainer->waitTime;
-		threadContainer->currBlock->processHead =
-								threadContainer->currBlock->processHead->next;
 
 		enqueueInt( threadContainer->intQueue,
 					createInterrupt( threadContainer->currBlock ) );
@@ -562,7 +667,7 @@ ProcessControlBlock *findShortestJob( ProcessList *procList )
     ProcessControlBlock *currBlock = procListFirst( procList );
     ProcessControlBlock *shortestJob = procListFirst( procList );
 
-    while( shortestJob->state == EXIT )
+    while( shortestJob->state == EXIT || shortestJob->state == BLOCKED )
     {
         shortestJob = shortestJob->next;
         if( shortestJob == NULL )
@@ -575,7 +680,8 @@ ProcessControlBlock *findShortestJob( ProcessList *procList )
     {
         if( currBlock->state != EXIT )
         {
-            if( currBlock->processTime < shortestJob->processTime )
+            if( currBlock->processTime < shortestJob->processTime &&
+			 	currBlock->state == READY )
             {
                 shortestJob = currBlock;
             }
@@ -723,7 +829,8 @@ void processOpCodesNonpreemptive( MetadataNode *currOp, Config *configData,
 */
 void processOpCodesPreemptive( Config *configData, LogList *logList,
 					ProcessControlBlock *currBlock, char *logStr, MMUList *mmu,
-				 	InterruptQueue *intQueue, ProcessList *procList )
+				 	InterruptQueue *intQueue, ProcessList *procList,
+					ReadyQueue *ready, ProcessList *blocked )
 {
 	MetadataNode *currOp = currBlock->processHead;
 
@@ -755,7 +862,7 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
 
 				// does one cycle, checks for any interrupts on the queue
 				checkForInterrupts( currBlock, intQueue, logStr, configData,
-									logList );
+									logList, ready, blocked );
 
 				index++;
 				// check for quantum time
@@ -784,7 +891,7 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
 
 				currBlock->processHead = currBlock->processHead->next;
 				checkForInterrupts( currBlock, intQueue, logStr, configData,
-									logList );
+									logList, ready, blocked );
 			}
         }
         else if( currOp->command == 'I' )
@@ -805,11 +912,23 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
 
             runPreemptiveThread( container );
 
-			if( getNextReady( procList ) == NULL )
+			if( procList != NULL )
 			{
-				snprintf( logStr, STD_LOG_STR,
-	                      "OS: CPU Idle" );
-	            logAction( logStr, configData, logList );
+				if( getNextReady( procList ) == NULL )
+				{
+					snprintf( logStr, STD_LOG_STR,
+		                      "OS: CPU Idle" );
+		            logAction( logStr, configData, logList );
+				}
+			}
+			if( ready != NULL )
+			{
+				if( ready->first == NULL )
+				{
+					snprintf( logStr, STD_LOG_STR,
+		                      "OS: CPU Idle" );
+		            logAction( logStr, configData, logList );
+				}
 			}
 			return;
         }
@@ -824,6 +943,10 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
             logAction( logStr, configData, logList );
 
 			currBlock->state = BLOCKED;
+			if( blocked != NULL )
+			{
+				listAddPCB( blocked, currBlock );
+			}
 			snprintf( logStr, STD_LOG_STR,
                       "OS: Process %d set in Blocked state",
                       currBlock->pid );
@@ -831,11 +954,23 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
 
             runPreemptiveThread( container );
 
-            if( getNextReady( procList ) == NULL )
+            if( procList != NULL )
 			{
-				snprintf( logStr, STD_LOG_STR,
-	                      "OS: CPU Idle" );
-	            logAction( logStr, configData, logList );
+				if( getNextReady( procList ) == NULL )
+				{
+					snprintf( logStr, STD_LOG_STR,
+		                      "OS: CPU Idle" );
+		            logAction( logStr, configData, logList );
+				}
+			}
+			if( ready != NULL )
+			{
+				if( ready->first == NULL )
+				{
+					snprintf( logStr, STD_LOG_STR,
+		                      "OS: CPU Idle" );
+		            logAction( logStr, configData, logList );
+				}
 			}
 			return;
         }
@@ -868,7 +1003,7 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
 
 			currBlock->processHead = currBlock->processHead->next;
 			checkForInterrupts( currBlock, intQueue, logStr, configData,
-								logList );
+								logList, ready, blocked );
         }
     }
 	endProcess( mmu, currBlock );
@@ -1388,6 +1523,33 @@ int listEmpty( ProcessList *procList )
 	{
 		if( currBlock->state != EXIT )
 		{
+			printf("PCB %d in State %d\n", currBlock->pid, currBlock->state);
+			return 0;
+		}
+		currBlock = currBlock->next;
+	}
+	return 1;
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in]
+*
+* @param[out]
+*
+*/
+int queueEmpty( ReadyQueue *ready )
+{
+    ProcessControlBlock *currBlock = ready->first;
+
+	while( currBlock != NULL )
+	{
+		if( currBlock->state != EXIT )
+		{
 			return 0;
 		}
 		currBlock = currBlock->next;
@@ -1433,12 +1595,14 @@ ProcessControlBlock *getNextReady( ProcessList *procList )
 *
 */
 void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
- 						char *logStr, Config *configData, LogList *logList )
+ 						char *logStr, Config *configData, LogList *logList,
+						ReadyQueue *ready, ProcessList *blocked )
 {
 	Interrupt *interrupt = NULL;
 
 	while( intQueue->count != 0 )
 	{
+		printf("Starting int loop. Count: %d\n", intQueue->count);
 		interrupt = dequeueInt( intQueue );
 
 		snprintf( logStr, STD_LOG_STR,
@@ -1447,7 +1611,12 @@ void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
 
 		if( pcb != NULL )
 		{
+
 			pcb->state = READY;
+			if( ready != NULL )
+			{
+				enqueuePCB( ready, pcb );
+			}
 			snprintf( logStr, STD_LOG_STR,
 	                  "OS: Process %d set in Ready state", pcb->pid );
 	        logAction( logStr, configData, logList );
@@ -1470,7 +1639,19 @@ void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
 			logAction( logStr, configData, logList );
 		}
 
+		interrupt->pcb->processHead = interrupt->pcb->processHead->next;
+
+		if( interrupt->pcb->processHead->command == 'A' )
+		{
+			interrupt->pcb->state = EXIT;
+		}
+
 		interrupt->pcb->state = READY;
+
+		if( ready != NULL )
+		{
+			enqueuePCB( ready, interrupt->pcb );
+		}
 		snprintf( logStr, STD_LOG_STR,
 				  "OS: Process %d set in Ready state",
 				  interrupt->pcb->pid );
@@ -1478,6 +1659,17 @@ void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
 
 		free( interrupt );
 		interrupt = NULL;
+
+
+		printf("Finishing loop. Count: %d\n", intQueue->count);
+		if( ready != NULL )
+		{
+			printf("Ready exists\n");
+		}
+		else if( ready == NULL )
+		{
+			printf("Ready no existo\n");
+		}
 	}
 	return;
 }
@@ -1503,6 +1695,52 @@ ThreadContainer *buildThreadContainer( Config *configData, LogList *logList,
 	container->waitTime = waitTime;
 
 	return container;
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in]
+*
+* @param[out]
+*
+*/
+void printPCBStatus( ReadyQueue *ready, ProcessList *blocked )
+{
+	ProcessControlBlock *currBlock = NULL;
+	if( ready->count > 0 )
+	{
+		currBlock = ready->first;
+		printf("READY QUEUE:\n");
+		printf("---------------------\n");
+		while( currBlock != NULL )
+		{
+			printf("Process: %d\n", currBlock->pid);
+			printf("State:   %d\n", currBlock->state);
+			printf("Time:    %d\n\n", currBlock->processTime);
+			currBlock = currBlock->next;
+		}
+		printf("---------------------\n\n");
+	}
+	else printf("READY QUEUE EMPTY\n\n");
+	if( blocked->count > 0 )
+	{
+		currBlock = blocked->first;
+		printf("BLOCKED LIST:\n");
+		printf("---------------------\n");
+		while( currBlock != NULL )
+		{
+			printf("Process: %d\n", currBlock->pid);
+			printf("State:   %d\n", currBlock->state);
+			printf("Time:    %d\n\n", currBlock->processTime);
+			currBlock = currBlock->next;
+		}
+		printf("---------------------\n\n");
+	}
+	else printf("BLOCKED LIST EMPTY\n\n");
 }
 
 // Terminating Precompiler Directives ///////////////////////////////

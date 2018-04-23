@@ -42,7 +42,7 @@ Secret Number: 764819
 */
 void enqueuePCB( ReadyQueue *queue, ProcessControlBlock *pcb )
 {
-    if( queue->first == NULL && queue->count == 0 )
+	if( queue->first == NULL && queue->count == 0 )
     {
         queue->first = pcb;
         queue->count++;
@@ -50,13 +50,16 @@ void enqueuePCB( ReadyQueue *queue, ProcessControlBlock *pcb )
     }
 
     ProcessControlBlock *currBlock = queue->first;
-    while( currBlock->next != NULL )
+    while( currBlock->nextInQueue != NULL )
     {
-        currBlock = currBlock->next;
+        currBlock = currBlock->nextInQueue;
     }
 
-    currBlock->next = pcb;
+
+    currBlock->nextInQueue = pcb;
+	pcb->nextInQueue = NULL;
     queue->count++;
+
     return;
 }
 
@@ -76,11 +79,16 @@ void enqueuePCB( ReadyQueue *queue, ProcessControlBlock *pcb )
 */
 ProcessControlBlock *dequeuePCB( ReadyQueue *queue )
 {
-    ProcessControlBlock *returnBlock = queue->first;
-    queue->first = queue->first->next;
-    queue->count--;
+	if( queue->count != 0 )
+	{
+		ProcessControlBlock *returnBlock = queue->first;
+		queue->first = returnBlock->nextInQueue;
+		queue->count--;
+		returnBlock->nextInQueue = NULL;
 
-    return returnBlock;
+		return returnBlock;
+	}
+	return NULL;
 }
 
 //==========================================================================

@@ -38,6 +38,7 @@ typedef struct ProcessControlBlock
     int processTime;
     MetadataNode *processHead;
     struct ProcessControlBlock *next;
+	struct ProcessControlBlock *nextInQueue;
 } ProcessControlBlock;
 
 typedef struct ProcessList
@@ -97,6 +98,16 @@ int calculateProcessTime( ProcessList *list, Config *configData );
   Sets all PCBs in list to the READY state
 */
 void setReady( ProcessList *list );
+
+/*
+
+*/
+ProcessControlBlock *removeFirst( ProcessList *procList );
+
+/*
+
+*/
+void removeBlocked( ProcessList *procList, int pid );
 
 // Terminating Precompiler Directives ///////////////////////////////
 //
