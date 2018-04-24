@@ -510,12 +510,16 @@ void runRRP( Config *configData, ProcessList *procList, LogList *logList,
     {
 		// selecting Processes for FCFS-P
 		currBlock = dequeuePCB( ready );
+		if( currBlock == NULL && ready == NULL )
+		{
+			currBlock = getNextReady( procList );
+		}
 
 		// this is used for CPU idle, ie waiting for blocked pcbs to go to READY
 		if( currBlock == NULL )
 		{
 			checkForInterrupts( currBlock, intQueue, logStr, configData,
-								logList, ready, NULL );
+								logList, ready, procList );
 			continue;
 		}
 
@@ -530,7 +534,7 @@ void runRRP( Config *configData, ProcessList *procList, LogList *logList,
         logAction( logStr, configData, logList );
 
         processOpCodesPreemptive( configData, logList, currBlock, logStr, mmu,
-		 							intQueue, procList, NULL, NULL );
+		 							intQueue, procList, ready, NULL );
     }
 
     logAction( "System End", configData, logList );
@@ -861,8 +865,17 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
 				currBlock->processTime -= configData->pCycleTime;
 
 				// does one cycle, checks for any interrupts on the queue
+				// if( ready == NULL )
+				// {
+				// 	printf("Starting P int check with no Ready\n");
+				// }
 				checkForInterrupts( currBlock, intQueue, logStr, configData,
-									logList, ready, blocked );
+									logList, ready, procList );
+				if( currBlock->state != RUN )
+				{
+					currOp->value -= index + 1;
+					return;
+				}
 
 				index++;
 				// check for quantum time
@@ -889,9 +902,12 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
 					"Process %d, run operation end", currBlock->pid );
 					logAction( logStr, configData, logList );
 
+				// printPCBList( procList );
+				// printPCBStatus( ready );
+
 				currBlock->processHead = currBlock->processHead->next;
 				checkForInterrupts( currBlock, intQueue, logStr, configData,
-									logList, ready, blocked );
+									logList, ready, procList );
 			}
         }
         else if( currOp->command == 'I' )
@@ -921,15 +937,15 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
 		            logAction( logStr, configData, logList );
 				}
 			}
-			if( ready != NULL )
-			{
-				if( ready->first == NULL )
-				{
-					snprintf( logStr, STD_LOG_STR,
-		                      "OS: CPU Idle" );
-		            logAction( logStr, configData, logList );
-				}
-			}
+			// if( ready != NULL )
+			// {
+			// 	if( ready->first == NULL )
+			// 	{
+			// 		snprintf( logStr, STD_LOG_STR,
+		    //                   "OS: CPU Idle" );
+		    //         logAction( logStr, configData, logList );
+			// 	}
+			// }
 			return;
         }
         else if( currOp->command == 'O' )
@@ -1003,7 +1019,7 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
 
 			currBlock->processHead = currBlock->processHead->next;
 			checkForInterrupts( currBlock, intQueue, logStr, configData,
-								logList, ready, blocked );
+								logList, ready, procList );
         }
     }
 	endProcess( mmu, currBlock );
@@ -1523,7 +1539,6 @@ int listEmpty( ProcessList *procList )
 	{
 		if( currBlock->state != EXIT )
 		{
-			printf("PCB %d in State %d\n", currBlock->pid, currBlock->state);
 			return 0;
 		}
 		currBlock = currBlock->next;
@@ -1596,13 +1611,24 @@ ProcessControlBlock *getNextReady( ProcessList *procList )
 */
 void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
  						char *logStr, Config *configData, LogList *logList,
-						ReadyQueue *ready, ProcessList *blocked )
+						ReadyQueue *ready, ProcessList *procList )
 {
 	Interrupt *interrupt = NULL;
 
 	while( intQueue->count != 0 )
 	{
-		printf("Starting int loop. Count: %d\n", intQueue->count);
+		// printf("\nReport start int loop\n");
+		// printPCBList( procList );
+		// printPCBStatus( ready );
+		// printf("Starting int loop. Int Count: %d\n", intQueue->count);
+		// if( ready != NULL )
+		// {
+		// 	printf("Ready exists before interrupt loop\n");
+		// }
+		// else if( ready == NULL )
+		// {
+		// 	printf("Ready no existo before int loop\n");
+		// }
 		interrupt = dequeueInt( intQueue );
 
 		snprintf( logStr, STD_LOG_STR,
@@ -1641,9 +1667,20 @@ void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
 
 		interrupt->pcb->processHead = interrupt->pcb->processHead->next;
 
-		if( interrupt->pcb->processHead->command == 'A' )
+		if( interrupt->pcb->processTime == 0 )
 		{
 			interrupt->pcb->state = EXIT;
+			snprintf( logStr, STD_LOG_STR,
+					  "OS: Process %d set in Exit state",
+					  interrupt->pcb->pid );
+			logAction( logStr, configData, logList );
+
+			// printPCBList( procList );
+			// printPCBStatus( ready );
+
+			free( interrupt );
+			interrupt = NULL;
+			return;
 		}
 
 		interrupt->pcb->state = READY;
@@ -1661,15 +1698,18 @@ void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
 		interrupt = NULL;
 
 
-		printf("Finishing loop. Count: %d\n", intQueue->count);
-		if( ready != NULL )
-		{
-			printf("Ready exists\n");
-		}
-		else if( ready == NULL )
-		{
-			printf("Ready no existo\n");
-		}
+		// printf("Finishing loop. Count: %d\n", intQueue->count);
+		// if( ready != NULL )
+		// {
+		// 	printf("Ready exists after loop\n");
+		// }
+		// else if( ready == NULL )
+		// {
+		// 	printf("Ready no existo after loop\n");
+		// }
+		//
+		// printf("Report end int loop\n");
+		// printPCBList( procList );
 	}
 	return;
 }
@@ -1708,10 +1748,15 @@ ThreadContainer *buildThreadContainer( Config *configData, LogList *logList,
 * @param[out]
 *
 */
-void printPCBStatus( ReadyQueue *ready, ProcessList *blocked )
+void printPCBStatus( ReadyQueue *ready )
 {
 	ProcessControlBlock *currBlock = NULL;
-	if( ready->count > 0 )
+	printf("Printing ready queue\n");
+	if( ready == NULL )
+	{
+		printf("READY QUEUE DOES NOT EXIST\n\n");
+	}
+	else if( ready->count > 0 )
 	{
 		currBlock = ready->first;
 		printf("READY QUEUE:\n");
@@ -1726,21 +1771,58 @@ void printPCBStatus( ReadyQueue *ready, ProcessList *blocked )
 		printf("---------------------\n\n");
 	}
 	else printf("READY QUEUE EMPTY\n\n");
-	if( blocked->count > 0 )
+}
+
+//======================================================================
+/**
+* @brief
+*
+* @details
+*
+* @param[in]
+*
+* @param[out]
+*
+*/
+void printPCBList( ProcessList *procList )
+{
+	printf("Starting list print\n");
+	if( procList == NULL )
 	{
-		currBlock = blocked->first;
-		printf("BLOCKED LIST:\n");
-		printf("---------------------\n");
-		while( currBlock != NULL )
-		{
-			printf("Process: %d\n", currBlock->pid);
-			printf("State:   %d\n", currBlock->state);
-			printf("Time:    %d\n\n", currBlock->processTime);
-			currBlock = currBlock->next;
-		}
-		printf("---------------------\n\n");
+		printf("Proclist null!\n");
 	}
-	else printf("BLOCKED LIST EMPTY\n\n");
+	ProcessControlBlock *currBlock = procListFirst( procList );
+	printf("Printing Process List\n-----------------\n");
+	while( currBlock != NULL )
+	{
+		printf("PID:   %d\n", currBlock->pid);
+		printf("Time:  %d\n", currBlock->processTime);
+		if( currBlock->state == 0 )
+		{
+			printf("State: NEW %d\n\n", currBlock->state);
+		}
+		else if( currBlock->state == 1 )
+		{
+			printf("State: READY %d\n\n", currBlock->state);
+		}
+		else if( currBlock->state == 2 )
+		{
+			printf("State: RUN %d\n\n", currBlock->state);
+		}
+		else if( currBlock->state == 3 )
+		{
+			printf("State: BLOCKED %d\n\n", currBlock->state);
+		}
+		else if( currBlock->state == 4 )
+		{
+			printf("State: EXIT %d\n\n", currBlock->state);
+		}
+		else
+		{
+			printf("State: NONE\n\n");
+		}
+		currBlock = currBlock->next;
+	}
 }
 
 // Terminating Precompiler Directives ///////////////////////////////

@@ -158,7 +158,7 @@ ProcessControlBlock *getNextReady( ProcessList *procList );
 
 void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
  						char *logStr, Config *configData, LogList *logList,
-					 	ReadyQueue *ready, ProcessList *blocked );
+					 	ReadyQueue *ready, ProcessList *procList );
 
 //==========================================================================
 
@@ -168,7 +168,9 @@ ThreadContainer *buildThreadContainer( Config *configData, LogList *logList,
 
 //==========================================================================
 
-void printPCBStatus( ReadyQueue *ready, ProcessList *blocked );
+void printPCBStatus( ReadyQueue *ready );
+
+void printPCBList( ProcessList *procList );
 
 // Terminating Precompiler Directives ///////////////////////////////
 //

@@ -79,7 +79,7 @@ void enqueuePCB( ReadyQueue *queue, ProcessControlBlock *pcb )
 */
 ProcessControlBlock *dequeuePCB( ReadyQueue *queue )
 {
-	if( queue->count != 0 )
+	if( queue->count && queue->count != 0 )
 	{
 		ProcessControlBlock *returnBlock = queue->first;
 		queue->first = returnBlock->nextInQueue;

@@ -91,6 +91,7 @@ int main ( int argc, char *argv[] )
         }
         closeFile( metaFile );
 
+		setvbuf(stdout, NULL, _IONBF, 0); // turn off buffering for stdout
         runSimulator( mdList, configData );
 
         mdListDestroy( mdList );
