@@ -122,7 +122,7 @@ void processOpCodesNonpreemptive( MetadataNode *currOp, Config *configData,
 void processOpCodesPreemptive( Config *configData, LogList *logList,
 				ProcessControlBlock *currBlock, char *logStr, MMUList *mmu,
 			 	InterruptQueue *intQueue, ProcessList *procList,
-				ReadyQueue *ready, ProcessList *blocked );
+				ReadyQueue *ready );
 
 //==========================================================================
 
