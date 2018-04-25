@@ -552,12 +552,15 @@ void runNonpreemptiveThread( int threadTime )
 
 //======================================================================
 /**
-* @brief
+* @brief Function creates a thread id, attributes, and creates a thread
+*	and detachs it from the main program
 *
-* @details
+* @details Function initializes thread data, then creates a thread that
+*	will run the runConcurrentThread method, after detaching from main
+*	so that main doesn't wait for it to rejoin
 *
 * @param[in] threadTime
-*   A integer representing the milliseconds to run the thread for.
+*   An integer representing the milliseconds to run the thread for.
 */
 void runPreemptiveThread( ThreadContainer *container )
 {
@@ -571,13 +574,12 @@ void runPreemptiveThread( ThreadContainer *container )
 
 //======================================================================
 /**
-* @brief
+* @brief Function
 *
 * @details
 *
-* @param[in]
-*
-* @param[out]
+* @param[in] container
+* A pointer to a ThreadContainer struct holding all pointers to shared data
 *
 */
 void *runConcurrentThread( void *container )
@@ -767,12 +769,12 @@ void processOpCodesNonpreemptive( MetadataNode *currOp, Config *configData,
 
 //======================================================================
 /**
-* @brief Function
+* @brief Function concurrently processes multiple PCBs by using threads
+*	and forking processees to concurrently run timers
 *
-* @details Function
-*
-* @param[in] currOp
-*   A pointer to the head MetadataNode of a PCB
+* @details Function processes using preemption. Can interrupt a running
+*	process, and create threads to process I/O operations, simulates
+*	concurrent processing.
 *
 * @param[in] configData
 *   A pointer to a Config struct storing the given configuration data
@@ -788,6 +790,15 @@ void processOpCodesNonpreemptive( MetadataNode *currOp, Config *configData,
 *
 * @param[in] mmu
 *   A pointer to an MMUList struct storing allocs
+*
+*@param[in] intQueue
+*	A pointer to an interrupt queue storing interrupt structs
+*
+*@param[in] procList
+*	A pointer to a PCB linked list storing PCB structs
+*
+*@param[in] ready
+*	A pointer to an interrupt queue storing interrupt structs
 *
 */
 void processOpCodesPreemptive( Config *configData, LogList *logList,
@@ -918,15 +929,6 @@ void processOpCodesPreemptive( Config *configData, LogList *logList,
 		            logAction( logStr, configData, logList );
 				}
 			}
-			// if( ready != NULL )
-			// {
-			// 	if( ready->first == NULL )
-			// 	{
-			// 		snprintf( logStr, STD_LOG_STR,
-		    //                   "OS: CPU Idle" );
-		    //         logAction( logStr, configData, logList );
-			// 	}
-			// }
 			return;
         }
         else if( currOp->command == 'M' )
@@ -1461,13 +1463,16 @@ MMUNode *removeAlloc( MMUList *mmu, MMUNode *alloc )
 
 //======================================================================
 /**
-* @brief
+* @brief Function returns whether list contains any process not in Exit
 *
-* @details
+* @details Function iterates over process list, if any pcb not in Exit
+* state, then return 0, if all in Exit, return 1
 *
-* @param[in]
+* @param[in] procList
+* A linked list of process control blocks
 *
-* @param[out]
+* @param[out] int
+* Returns 0 if any pcb is not in Exit, 1 if all in Exit
 *
 */
 int listEmpty( ProcessList *procList )
@@ -1487,13 +1492,16 @@ int listEmpty( ProcessList *procList )
 
 //======================================================================
 /**
-* @brief
+* @brief Function returns whether the queue contains any Ready processes
 *
-* @details
+* @details Function iterates through the queue until finding a processes
+* in the Ready state
 *
-* @param[in]
+* @param[in] ready
+* A queue structure holding nodes that are Ready Process Control Blocks
 *
-* @param[out]
+* @param[out] int
+* returns 0 if there is a process not in Exit, ie in Blocked or Ready, or Run
 *
 */
 int queueEmpty( ReadyQueue *ready )
@@ -1513,13 +1521,16 @@ int queueEmpty( ReadyQueue *ready )
 
 //======================================================================
 /**
-* @brief
+* @brief Function returns the PCB will the smallest PID that is in Ready
 *
-* @details
+* @details Function iterates through the list of processes, returns the
+* first one it finds in Readyto ensure it has the smallest PID possible
 *
-* @param[in]
+* @param[in] procList
+* A linked list of processes
 *
-* @param[out]
+* @param[out] ProcessControlBlock
+* A process that is in Ready state
 *
 */
 ProcessControlBlock *getNextReady( ProcessList *procList )
@@ -1556,18 +1567,6 @@ void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
 
 	while( intQueue->count != 0 )
 	{
-		// printf("\nReport start int loop\n");
-		// printPCBList( procList );
-		// printPCBStatus( ready );
-		// printf("Starting int loop. Int Count: %d\n", intQueue->count);
-		// if( ready != NULL )
-		// {
-		// 	printf("Ready exists before interrupt loop\n");
-		// }
-		// else if( ready == NULL )
-		// {
-		// 	printf("Ready no existo before int loop\n");
-		// }
 		interrupt = dequeueInt( intQueue );
 
 		snprintf( logStr, STD_LOG_STR,
@@ -1614,9 +1613,6 @@ void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
 					  interrupt->pcb->pid );
 			logAction( logStr, configData, logList );
 
-			// printPCBList( procList );
-			// printPCBStatus( ready );
-
 			free( interrupt );
 			interrupt = NULL;
 			return;
@@ -1635,33 +1631,35 @@ void checkForInterrupts( ProcessControlBlock *pcb, InterruptQueue *intQueue,
 
 		free( interrupt );
 		interrupt = NULL;
-
-
-		// printf("Finishing loop. Count: %d\n", intQueue->count);
-		// if( ready != NULL )
-		// {
-		// 	printf("Ready exists after loop\n");
-		// }
-		// else if( ready == NULL )
-		// {
-		// 	printf("Ready no existo after loop\n");
-		// }
-		//
-		// printf("Report end int loop\n");
-		// printPCBList( procList );
 	}
 	return;
 }
 
 //======================================================================
 /**
-* @brief
+* @brief Function creates container for shared memory for threads
 *
-* @details
+* @details Function creates and returns a struct containing all necessary
+*	shared memory needed for concurrent execution of threads.
 *
-* @param[in]
+* @param[in] configData
+* A pointer to the struct containing configuration data
 *
-* @param[out]
+* @param[in] logList
+* A pointer to the linked list containing all logging data to print to
+* screen and file.
+*
+* @param[in] intQueue
+* A pointer to the queue containing interrupt structs.
+*
+* @param[in] currBlock
+* A pointer to the struct containing process data
+*
+* @param[in] waitTime
+* A pointer to the struct containing configuration data
+*
+* @param[out] threadContainer
+* A struct containing pointers to each of the parameters given
 *
 */
 ThreadContainer *buildThreadContainer( Config *configData, LogList *logList,
